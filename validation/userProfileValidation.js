@@ -2,8 +2,9 @@ const Joi = require('joi');
 
 // Define the user schema
 const userSchema = Joi.object({
+    image:Joi.string().optional(),
     name: Joi.string().required(),
-    phoneNumber: Joi.string().required().pattern(/^\d{10}$/),  // Validate phone number (10 digits)
+    phoneNumber: Joi.string().required().pattern(/^\d{10}$/), 
     gender: Joi.string().valid('Male', 'Female', 'Other').required(),
     email: Joi.string().email().required(),
 });

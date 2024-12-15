@@ -12,7 +12,7 @@ const createProfile = async (req, res) => {
         }
 
         // Create new user
-        const newUser = new User({ name, phoneNumber, gender, email });
+        const newUser = new User({  image:req.file.originalname,name, phoneNumber, gender, email });
 
         // Save the new user to the database
         await newUser.save();
