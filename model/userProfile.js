@@ -6,7 +6,7 @@ const userProfileSchema = new mongoose.Schema({
         required:false
     },
     name: { type: String, required: true },
-    phoneNumber: { type: String, required: true },
+    phoneNumber: { type: String, required: true, unique: true,match: [/^\d{10}$/, 'Phone number must be 10 digits'] },
     gender: { type: String, required: true },
     email: { type: String, required: true, unique: true },
 }, {
