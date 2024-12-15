@@ -1,5 +1,6 @@
 const express = require("express");
-const { validateEmail, validateOtp } = require("../validation/CustomerValidation"); // Correctly destructuring imports
+const { validateEmail, validateOtp } = require("../validation/userValidation"); // Correctly destructuring imports
+
 const {
     findAll,
     save,
@@ -8,7 +9,7 @@ const {
     findById,
     deleteById,
     update,
-} = require("../controller/customerController");
+} = require("../controller/userController");
 
 const router = express.Router();
 
