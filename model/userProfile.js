@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const userProfileSchema = new mongoose.Schema({
     image:{
         type:String,
-        required:true
+        required:false
     },
     name: { type: String, required: true },
     phoneNumber: { type: String, required: true },
