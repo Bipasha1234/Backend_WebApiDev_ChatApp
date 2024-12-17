@@ -1,8 +1,9 @@
-const User = require('../model/userProfile'); 
+const User = require('../model/userProfile'); // Import UserProfile model
+const Customer = require('../model/user'); // Import Customer model
 
 // Controller to create a new user profile
 const createProfile = async (req, res) => {
-    const { name, phoneNumber, gender, email } = req.body;
+    const { name, phoneNumber, gender, email, customerId } = req.body;
 
     try {
         // Check if the user with this email already exists
@@ -11,10 +12,28 @@ const createProfile = async (req, res) => {
             return res.status(400).json({ message: "Email is already registered." });
         }
 
-        // Create new user
-        const newUser = new User({  image:req.file.originalname,name, phoneNumber, gender, email });
+        // If customerId is not passed in the request, we can assume it is linked to the logged-in customer
+        if (!customerId) {
+            return res.status(400).json({ message: "Customer ID is required." });
+        }
 
-        // Save the new user to the database
+        // Check if the customerId exists in the Customer collection
+        const customer = await Customer.findById(customerId);
+        if (!customer) {
+            return res.status(400).json({ message: "Invalid customer ID." });
+        }
+
+        // Create new user profile
+        const newUser = new User({
+            customerId,
+            image: req.file ? req.file.originalname : null, // Save image filename if uploaded
+            name,
+            phoneNumber,
+            gender,
+            email
+        });
+
+        // Save the new user profile to the database
         await newUser.save();
 
         // Respond with success

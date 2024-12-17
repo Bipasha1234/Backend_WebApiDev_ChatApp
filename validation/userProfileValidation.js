@@ -2,6 +2,7 @@ const Joi = require('joi');
 
 // Define the user schema
 const userSchema = Joi.object({
+    customerId: Joi.string().required(),
     image:Joi.string().optional(),
     name: Joi.string().required(),
     phoneNumber: Joi.string().required().pattern(/^\d{10}$/), 
