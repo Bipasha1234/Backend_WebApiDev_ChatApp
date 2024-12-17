@@ -4,67 +4,88 @@ const crypto = require("crypto");
 
 const save = async (req, res) => {
     try {
-        const { email } = req.body;
+        const { email, userProfileId } = req.body;
 
         // Validate email input
         if (!email) {
             return res.status(400).json({ message: "Email is required." });
         }
 
-        // Generate OTP and expiration time
-        const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
-        const otpExpiresAt = new Date(Date.now() + 1 * 60 * 1000); // 1 minute validity
-        // 1 minute validity
-
-        // Check if customer exists; create or update OTP details
+        // Check if customer already exists by email
         let customer = await Customer.findOne({ email });
+
+        // If customer doesn't exist, create a new record
         if (!customer) {
-            // If customer doesn't exist, create a new record
-            customer = new Customer({ email, otp, otpExpiresAt });
-        } else {
-            // Update existing customer's OTP and expiration
-            customer.otp = otp;
-            customer.otpExpiresAt = otpExpiresAt;
+            // You don't need userProfileId for new users in this case.
+            // Assuming that userProfileId is being created elsewhere in the backend or by another service.
+            
+            // Example: Create a new customer without userProfileId
+            customer = new Customer({
+                email,
+                otp: Math.floor(100000 + Math.random() * 900000).toString(), // Generate OTP
+                otpExpiresAt: new Date(Date.now() + 1 * 60 * 1000), // OTP expires in 1 minute
+            });
+
+            // Save the new customer
+            await customer.save();
+
+            // Send OTP email using nodemailer
+            await sendOtpEmail(customer.email, customer.otp);
+
+            return res.status(200).json({ message: "OTP sent to email successfully." });
         }
 
-        // Save changes to the database
+        // If the customer exists, update the OTP and userProfileId
+        // Ensure userProfileId is passed if updating the existing customer
+        if (!userProfileId) {
+            return res.status(400).json({ message: "userProfileId is required for existing users." });
+        }
+
+        customer.otp = Math.floor(100000 + Math.random() * 900000).toString(); // Generate OTP
+        customer.otpExpiresAt = new Date(Date.now() + 1 * 60 * 1000); // OTP expires in 1 minute
+        customer.userProfileId = userProfileId; // Link the user profile ID
+
+        // Save the updated customer
         await customer.save();
 
-        // Configure nodemailer transporter
-        const transporter = nodemailer.createTransport({
-            host: "smtp.gmail.com",
-            port: 587,
-            secure: false,
-            auth: {
-                 user:"bipashalamsal@gmail.com",
-                pass:"vosdyrvhuuymfyre"
-            },
-        });
+        // Send OTP email using nodemailer
+        await sendOtpEmail(customer.email, customer.otp);
 
-        // Send email with OTP
-        await transporter.sendMail({
-            from: "bipashalamsal@gmail.com", // Your email (from env variable)
-            to: email,
-            subject: "Your OTP Code",
-            html: `
-                <h1>Email Verification</h1>
-                <p>Please use the OTP below to verify your email:</p>
-                <h2>${otp}</h2>
-                <p>This OTP is valid for 1 minute.</p>
-            `,
-        });
+        return res.status(200).json({ message: "OTP sent to email successfully." });
 
-        // Respond with success message
-        res.status(200).json({ message: "OTP sent to email successfully." });
     } catch (e) {
-        console.error("Error in sending OTP:", e.message);
-
-        // Handle specific errors or fallback to a generic error
-        res.status(500).json({
-            message: "An error occurred while sending the OTP.",
-            error: e.message,
-        });
+        console.error("Error in saving customer:", e.message);
+        res.status(500).json({ message: "An error occurred while saving the customer.", error: e.message });
     }
+};
+
+// Function to send OTP email
+const sendOtpEmail = async (email, otp) => {
+    const transporter = nodemailer.createTransport({
+        host: "smtp.gmail.com",
+        port: 587,
+        secure: false,
+        auth: {
+            user: "bipashalamsal@gmail.com",
+            pass: "vosdyrvhuuymfyre"
+        },
+    });
+
+    await transporter.sendMail({
+        from: "bipashalamsal@gmail.com",
+        to: email,
+        subject: "Your OTP Code",
+        html: `
+            <h1>Email Verification</h1>
+            <p>Please use the OTP below to verify your email:</p>
+            <h2>${otp}</h2>
+            <p>This OTP is valid for 1 minute.</p>
+        `,
+    });
+};
+
+module.exports = {
+    save,
 };
 
 
@@ -105,8 +126,6 @@ const verifyOtp = async (req, res) => {
         res.status(500).json({ message: "Error verifying OTP.", error: e.message });
     }
 };
-
-
 
 const resendOtp = async (req, res) => {
     try {
@@ -180,7 +199,6 @@ const resendOtp = async (req, res) => {
     }
 };
 
-
 const findAll = async (req, res) => {
     try {
         const customers = await Customer.find();
@@ -226,9 +244,3 @@ module.exports = {
     deleteById,
     update,
 };
-
-
-
-
-
-
