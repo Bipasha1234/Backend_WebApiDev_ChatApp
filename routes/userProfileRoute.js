@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const validateUser = require('../validation/userProfileValidation'); // Import validation middleware
-const { createProfile } = require('../controller/userProfileController'); // Import controller method
+const validateUser = require('../validation/userProfileValidation'); 
+const { createProfile } = require('../controller/userProfileController'); 
 
 
 const multer=require("multer")
 
-const storage=multer.memoryStorage({
+const storage=multer.diskStorage({
     destination:function(req,res,cb){
         cb(null,'chat_app_images')
     },
@@ -16,7 +16,6 @@ const storage=multer.memoryStorage({
 })
 
 const upload=multer({storage})
-
 
 router.post('/profile',upload.single('image'),validateUser,createProfile);
 module.exports = router;
