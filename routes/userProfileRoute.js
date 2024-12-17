@@ -6,7 +6,7 @@ const { createProfile } = require('../controller/userProfileController'); // Imp
 
 const multer=require("multer")
 
-const storage=multer.diskStorage({
+const storage=multer.memoryStorage({
     destination:function(req,res,cb){
         cb(null,'chat_app_images')
     },
@@ -16,6 +16,7 @@ const storage=multer.diskStorage({
 })
 
 const upload=multer({storage})
+
 
 router.post('/profile',upload.single('image'),validateUser,createProfile);
 module.exports = router;

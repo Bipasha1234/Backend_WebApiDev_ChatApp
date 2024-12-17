@@ -1,4 +1,4 @@
-const User = require('../model/userProfile');
+const User = require('../model/userProfile'); 
 
 // Controller to create a new user profile
 const createProfile = async (req, res) => {
@@ -6,19 +6,13 @@ const createProfile = async (req, res) => {
 
     try {
         // Check if the user with this email already exists
-        const existingEmailUser = await User.findOne({ email });
-        if (existingEmailUser) {
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
             return res.status(400).json({ message: "Email is already registered." });
         }
 
-        // Check if the user with this phone number already exists
-        const existingPhoneUser = await User.findOne({ phoneNumber });
-        if (existingPhoneUser) {
-            return res.status(400).json({ message: "Phone number is already registered." });
-        }
-
         // Create new user
-        const newUser = new User({ image: req.file.originalname, name, phoneNumber, gender, email });
+        const newUser = new User({  image:req.file.originalname,name, phoneNumber, gender, email });
 
         // Save the new user to the database
         await newUser.save();
