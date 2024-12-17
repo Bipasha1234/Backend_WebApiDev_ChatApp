@@ -1,6 +1,11 @@
 const mongoose = require("mongoose");
 
 const userProfileSchema = new mongoose.Schema({
+    customerId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Customer', // Reference to the Customer model
+        required: true, // Ensure a customer exists for every profile
+    },
     image:{
         type:String,
         required:false

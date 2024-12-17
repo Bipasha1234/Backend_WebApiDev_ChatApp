@@ -11,7 +11,11 @@ const customerSchema = new mongoose.Schema({
     otpExpiresAt: {
         type: Date,
     },
+    userProfileId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'UserProfile', // Reference to the UserProfile model
+    },
 });
 
-const Customer = mongoose.model("Customer", customerSchema);
+const Customer = mongoose.model("Users", customerSchema);
 module.exports = Customer;
