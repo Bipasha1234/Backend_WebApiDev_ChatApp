@@ -47,10 +47,9 @@ const createProfile = async (req, res) => {
     }
 };
 
-// Controller to update an existing user profile
 const updateProfile = async (req, res) => {
     const { id } = req.params; // Extract the user profile ID from the URL parameters
-    const { name, phoneNumber, gender, email, customerId } = req.body;
+    const { name, phoneNumber, gender, customerId } = req.body;
 
     try {
         // Check if the user profile exists
@@ -67,11 +66,17 @@ const updateProfile = async (req, res) => {
             }
         }
 
+        // Prevent direct email updates
+        if (req.body.email) {
+            return res.status(400).json({ 
+                message: "Email updates are not allowed here. Use the email verification flow." 
+            });
+        }
+
         // Update the user profile with the new data
         existingUser.name = name || existingUser.name;
         existingUser.phoneNumber = phoneNumber || existingUser.phoneNumber;
         existingUser.gender = gender || existingUser.gender;
-        existingUser.email = email || existingUser.email;
         existingUser.customerId = customerId || existingUser.customerId;
         existingUser.image = req.file ? req.file.originalname : existingUser.image; // Update image if uploaded
 
@@ -88,6 +93,7 @@ const updateProfile = async (req, res) => {
         res.status(500).json({ message: "An error occurred while updating the profile." });
     }
 };
+
 
 // Controller to get a user profile by ID
 const getProfile = async (req, res) => {
@@ -139,10 +145,112 @@ const getAllProfiles = async (req, res) => {
     }
 };
 
+// Update Email: Step 1 - Generate OTP and send to new email
+const initiateEmailUpdate = async (req, res) => {
+    const { userId, newEmail } = req.body;
+
+    try {
+        // Validate input
+        if (!userId || !newEmail) {
+            return res.status(400).json({ message: "User ID and new email are required." });
+        }
+
+        // Check if new email is already taken
+        const emailExists = await UserProfile.findOne({ email: newEmail });
+        if (emailExists) {
+            return res.status(400).json({ message: "Email is already in use." });
+        }
+
+        // Find the user profile
+        const user = await UserProfile.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found." });
+        }
+
+        // Generate OTP and set expiration
+        const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+        const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // OTP valid for 5 minutes
+
+        // Update user with OTP and temporarily store new email
+        user.otp = otp;
+        user.otpExpiresAt = otpExpiresAt;
+        user.emailToVerify = newEmail; // Temporarily store new email
+        await user.save();
+
+        // Send OTP to the new email
+        const transporter = nodemailer.createTransport({
+            host: "smtp.gmail.com",
+            port: 587,
+            secure: false,
+            auth: {
+                user: "your-email@gmail.com",
+                pass: "your-email-password"
+            },
+        });
+
+        await transporter.sendMail({
+            from: "your-email@gmail.com",
+            to: newEmail,
+            subject: "Email Update Verification Code",
+            text: `Your OTP for email update is ${otp}. It is valid for 5 minutes.`,
+        });
+
+        res.status(200).json({ message: "OTP sent to new email. Please verify." });
+    } catch (error) {
+        console.error("Error initiating email update:", error);
+        res.status(500).json({ message: "Error initiating email update." });
+    }
+};
+
+// Update Email: Step 2 - Verify OTP and update email
+const verifyEmailUpdate = async (req, res) => {
+    const { userId, otp } = req.body;
+
+    try {
+        // Validate input
+        if (!userId || !otp) {
+            return res.status(400).json({ message: "User ID and OTP are required." });
+        }
+
+        // Find the user profile
+        const user = await UserProfile.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found." });
+        }
+
+        // Check if OTP matches and is not expired
+        if (user.otp !== otp) {
+            return res.status(400).json({ message: "Invalid OTP." });
+        }
+        if (new Date() > user.otpExpiresAt) {
+            return res.status(400).json({ message: "OTP has expired. Please try again." });
+        }
+
+        // Update the email and clear OTP fields
+        user.email = user.emailToVerify; // Update to the new email
+        user.emailToVerify = null;
+        user.otp = null;
+        user.otpExpiresAt = null;
+        await user.save();
+
+        res.status(200).json({ message: "Email updated successfully." });
+    } catch (error) {
+        console.error("Error verifying email update:", error);
+        res.status(500).json({ message: "Error verifying email update." });
+    }
+};
+
+
 module.exports = {
     createProfile,
     updateProfile,
     getProfile,
     deleteProfile,
-    getAllProfiles
+    getAllProfiles,
+    initiateEmailUpdate,
+    verifyEmailUpdate
 };
+
+
+
+

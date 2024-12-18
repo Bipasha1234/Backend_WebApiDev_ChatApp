@@ -4,7 +4,6 @@ const userProfileSchema = new mongoose.Schema({
     customerId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Customer', // Reference to Customer model
-        required: true, // Make this field required to associate the profile with a customer
     },
     image: {
         type: String,
@@ -29,8 +28,16 @@ const userProfileSchema = new mongoose.Schema({
         required: true, 
         unique: true 
     },
+    otp: {
+        type: String, // OTP for email re-verification
+        required: false
+    },
+    otpExpiresAt: {
+        type: Date, // Expiration time for OTP
+        required: false
+    }
 }, {
-    timestamps: true, // Automatically adds createdAt and updatedAt fields
+    timestamps: true // Automatically adds createdAt and updatedAt fields
 });
 
 const UserProfile = mongoose.model("UserProfile", userProfileSchema);

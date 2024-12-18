@@ -6,7 +6,7 @@ const {
     updateProfile, 
     getProfile, 
     deleteProfile, 
-    getAllProfiles 
+    getAllProfiles ,initiateEmailUpdate, verifyEmailUpdate
 } = require('../controller/userProfileController');
 
 const multer = require('multer');
@@ -28,5 +28,7 @@ router.put('/profile/:id', upload.single('image'), validateUser, updateProfile);
 router.get('/profile/:id', getProfile);
 router.delete('/profile/:id', deleteProfile);
 router.get('/profiles', getAllProfiles);
+router.get('/profile/email-update', getAllProfiles);
+router.get('/profile/verify-email-update', getAllProfiles);
 
 module.exports = router;
