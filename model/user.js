@@ -4,6 +4,7 @@ const customerSchema = new mongoose.Schema({
     email: {
         type: String,
         required: true,
+        unique: true,
     },
     otp: {
         type: String,
@@ -13,7 +14,12 @@ const customerSchema = new mongoose.Schema({
     },
     userProfileId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'UserProfile', // Reference to the UserProfile model
+        ref: 'UserProfile',
+    },
+    role: {
+        type: String,
+        enum: ['user', 'admin'], 
+        default: 'user',  // Default to 'user' if not specified
     },
 });
 
