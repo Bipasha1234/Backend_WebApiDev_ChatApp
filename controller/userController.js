@@ -6,58 +6,66 @@ const save = async (req, res) => {
     try {
         const { email, userProfileId } = req.body;
 
-        // Validate email input
         if (!email) {
             return res.status(400).json({ message: "Email is required." });
         }
 
-        // Check if customer already exists by email
+        // Check if the userProfileId is valid (optional)
+        if (userProfileId) {
+            const userProfileExists = await UserProfile.findById(userProfileId);
+            if (!userProfileExists) {
+                return res.status(400).json({ message: "Invalid userProfileId." });
+            }
+        }
+
         let customer = await Customer.findOne({ email });
 
-        // If customer doesn't exist, create a new record
         if (!customer) {
-            // You don't need userProfileId for new users in this case.
-            // Assuming that userProfileId is being created elsewhere in the backend or by another service.
-            
-            // Example: Create a new customer without userProfileId
             customer = new Customer({
                 email,
-                otp: Math.floor(100000 + Math.random() * 900000).toString(), // Generate OTP
-                otpExpiresAt: new Date(Date.now() + 1 * 60 * 1000), // OTP expires in 1 minute
+                userProfileId: userProfileId || null, // Optional linking
             });
 
-            // Save the new customer
-            await customer.save();
+            // Generate OTP
+            const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-            // Send OTP email using nodemailer
-            await sendOtpEmail(customer.email, customer.otp);
+            // Hash OTP using SHA-256
+            const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
+
+            customer.otp = hashedOtp;
+            customer.otpExpiresAt = new Date(Date.now() + 1 * 60 * 1000); // OTP valid for 1 minute
+
+            await customer.save();
+            await sendOtpEmail(customer.email, otp);
 
             return res.status(200).json({ message: "OTP sent to email successfully." });
         }
 
-        // If the customer exists, update the OTP and userProfileId
-        // Ensure userProfileId is passed if updating the existing customer
         if (!userProfileId) {
             return res.status(400).json({ message: "userProfileId is required for existing users." });
         }
 
-        customer.otp = Math.floor(100000 + Math.random() * 900000).toString(); // Generate OTP
-        customer.otpExpiresAt = new Date(Date.now() + 1 * 60 * 1000); // OTP expires in 1 minute
-        customer.userProfileId = userProfileId; // Link the user profile ID
+        // Generate a new OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-        // Save the updated customer
+        // Hash OTP using SHA-256
+        const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
+
+        customer.otp = hashedOtp;
+        customer.otpExpiresAt = new Date(Date.now() + 1 * 60 * 1000); // OTP valid for 1 minute
+        customer.userProfileId = userProfileId;
+
         await customer.save();
-
-        // Send OTP email using nodemailer
-        await sendOtpEmail(customer.email, customer.otp);
+        await sendOtpEmail(customer.email, otp);
 
         return res.status(200).json({ message: "OTP sent to email successfully." });
 
     } catch (e) {
-        console.error("Error in saving customer:", e.message);
+        console.error("Error saving customer:", e.message);
         res.status(500).json({ message: "An error occurred while saving the customer.", error: e.message });
     }
 };
+
 
 // Function to send OTP email
 const sendOtpEmail = async (email, otp) => {
@@ -105,8 +113,11 @@ const verifyOtp = async (req, res) => {
             return res.status(404).json({ message: "Customer not found." });
         }
 
+        // Hash the entered OTP to compare it with the stored hash
+        const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
+
         // Check if OTP matches
-        if (customer.otp !== otp) {
+        if (customer.otp !== hashedOtp) {
             return res.status(400).json({ message: "Invalid OTP." });
         }
 
@@ -126,6 +137,7 @@ const verifyOtp = async (req, res) => {
         res.status(500).json({ message: "Error verifying OTP.", error: e.message });
     }
 };
+
 
 const resendOtp = async (req, res) => {
     try {

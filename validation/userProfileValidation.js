@@ -2,9 +2,9 @@ const Joi = require('joi');
 
 // Combined user schema for both create and update profile
 const userSchema = Joi.object({
-    customerId: Joi.string().required(), // Always required
-    image: Joi.string().optional(), // Optional field
-    name: Joi.string().required(), // Required for both create and update
+    userId: Joi.string().required(), 
+    image: Joi.string().optional(),
+    name: Joi.string().required(), 
     phoneNumber: Joi.string()
         .required()
         .pattern(/^\d{10}$/)
@@ -12,18 +12,8 @@ const userSchema = Joi.object({
             "string.pattern.base": "Phone number must be exactly 10 digits."
         }),
     gender: Joi.string().valid('Male', 'Female', 'Other').required(),
-    email: Joi.string().email().required(),
-    otp: Joi.string()
-        .length(6)
-        .optional() 
-        .messages({
-            "string.length": "OTP must be exactly 6 digits."
-        }),
-    otpExpiresAt: Joi.date()
-        .optional() // Optional field
-        .messages({
-            "date.base": "OTP expiration must be a valid date."
-        }),
+    email: Joi.string().email().optional(),
+    
 });
 
 const validateUser = (req, res, next) => {

@@ -6,10 +6,11 @@ const {
     updateProfile, 
     getProfile, 
     deleteProfile, 
-    getAllProfiles ,initiateEmailUpdate, verifyEmailUpdate
+    getAllProfiles ,initiateEmailUpdate
 } = require('../controller/userProfileController');
 
 const multer = require('multer');
+const {authenticateToken}=require("../security/Auth");
 
 // Multer configuration for handling image uploads
 const storage = multer.diskStorage({
@@ -23,12 +24,11 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-router.post('/profile', upload.single('image'), validateUser, createProfile);
+router.post('/profile', authenticateToken,upload.single('image'), validateUser, createProfile);
 router.put('/profile/:id', upload.single('image'), validateUser, updateProfile);
 router.get('/profile/:id', getProfile);
 router.delete('/profile/:id', deleteProfile);
 router.get('/profiles', getAllProfiles);
-router.get('/profile/email-update', getAllProfiles);
-router.get('/profile/verify-email-update', getAllProfiles);
+router.post('/profile/email-update', initiateEmailUpdate)
 
 module.exports = router;

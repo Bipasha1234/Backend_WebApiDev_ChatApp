@@ -3,7 +3,7 @@ const cors = require('cors')
 const connectDb=require("./config/db")
 const CustomerRouter=require("./routes/userRoute")
 const CustomerProfileRouter=require("./routes/userProfileRoute")
-const CustomerPinSecurityRouter=require("./routes/pinSecurityRoute")
+const AuthRouter=require("./routes/authRoute")
 const app=express();
 
 connectDb();
@@ -11,9 +11,9 @@ connectDb();
 app.use(express.json());
 app.use(cors());
 
-app.use("/api/customer",CustomerRouter );
-app.use("/api/customer",CustomerProfileRouter );
-app.use("/api/customer",CustomerPinSecurityRouter)
+app.use("/api/user",CustomerRouter );
+app.use("/api/user/profile",CustomerProfileRouter );
+app.use("/api/auth",AuthRouter)
 
 const port=3000;
 app.listen(port,()=>{

@@ -1,9 +1,9 @@
 const mongoose = require("mongoose");
 
 const userProfileSchema = new mongoose.Schema({
-    customerId: {
+    userId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Customer', // Reference to Customer model
+        ref: 'creds', 
     },
     image: {
         type: String,
@@ -25,20 +25,10 @@ const userProfileSchema = new mongoose.Schema({
     },
     email: { 
         type: String, 
-        required: true, 
+        required: false, 
         unique: true 
     },
-    otp: {
-        type: String, // OTP for email re-verification
-        required: false
-    },
-    otpExpiresAt: {
-        type: Date, // Expiration time for OTP
-        required: false
-    }
-}, {
-    timestamps: true // Automatically adds createdAt and updatedAt fields
 });
 
-const UserProfile = mongoose.model("UserProfile", userProfileSchema);
+const UserProfile = mongoose.model("userprofiles", userProfileSchema);
 module.exports = UserProfile;
