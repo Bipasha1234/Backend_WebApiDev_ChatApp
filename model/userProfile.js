@@ -1,10 +1,10 @@
 const mongoose = require("mongoose");
 
 const userProfileSchema = new mongoose.Schema({
-    userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'creds', 
-    },
+    // userId: {
+    //     type: mongoose.Schema.Types.ObjectId,
+    //     ref: 'creds', 
+    // },
     image: {
         type: String,
         required: false
@@ -25,7 +25,7 @@ const userProfileSchema = new mongoose.Schema({
     },
     email: { 
         type: String, 
-        required: false, 
+        required: true, 
         unique: true 
     },
 });

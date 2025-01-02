@@ -24,11 +24,11 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-router.post('/profile', authenticateToken,upload.single('image'), validateUser, createProfile);
-router.put('/profile/:id', upload.single('image'), validateUser, updateProfile);
-router.get('/profile/:id', getProfile);
-router.delete('/profile/:id', deleteProfile);
-router.get('/profiles', getAllProfiles);
-router.post('/profile/email-update', initiateEmailUpdate)
+router.post('/create',upload.single('image'), validateUser, createProfile);
+router.put('/profile/:id',authenticateToken,upload.single('image'), validateUser, updateProfile);
+router.get('/profile/:id', authenticateToken,getProfile);
+router.delete('/profile/:id', authenticateToken,deleteProfile);
+router.get('/profiles', authenticateToken,getAllProfiles);
+router.post('/profile/email-update', authenticateToken,initiateEmailUpdate)
 
 module.exports = router;

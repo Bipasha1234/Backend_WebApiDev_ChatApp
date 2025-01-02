@@ -2,7 +2,6 @@ const Joi = require('joi');
 
 // Combined user schema for both create and update profile
 const userSchema = Joi.object({
-    userId: Joi.string().required(), 
     image: Joi.string().optional(),
     name: Joi.string().required(), 
     phoneNumber: Joi.string()
@@ -12,7 +11,7 @@ const userSchema = Joi.object({
             "string.pattern.base": "Phone number must be exactly 10 digits."
         }),
     gender: Joi.string().valid('Male', 'Female', 'Other').required(),
-    email: Joi.string().email().optional(),
+    email: Joi.string().email().required()
     
 });
 

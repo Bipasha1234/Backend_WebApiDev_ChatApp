@@ -2,54 +2,30 @@ const User = require('../model/userProfile');
 const Credential = require('../model/credential'); 
 const bcrypt = require('bcryptjs');
 
-// Controller to create a new user profile
+// No authentication required for public profile creation (e.g., user registration)
 const createProfile = async (req, res) => {
-    const { name, phoneNumber, gender, email, userId } = req.body;
-
+    const { name, phoneNumber, gender, email } = req.body;
+ 
     try {
-        // Ensure the userId is linked to the correct email
-        const existingCustomer = await Credential.findById(userId);
-        if (!existingCustomer) {
-            return res.status(400).json({ message: "Invalid customer ID." });
-        }
-
-        // Check if the email provided matches the email in the customer record
-        if (existingCustomer.email !== email) {
-            return res.status(400).json({
-                message: "Email mismatch. The email must match the registered email for this user ID."
-            });
-        }
-
-        // If email matches, create the user profile
-        const newUser = new User({
-            userId,
-            image: req.file ? req.file.originalname : null, // Save image filename if uploaded
+        const newProfile = await User.create({
             name,
             phoneNumber,
             gender,
-            email  // Use the email from the request directly
+            email,
         });
-
-        // Save the new user profile to the database
-        await newUser.save();
-
-        // Respond with success
-        res.status(201).json({
-            message: "Profile created successfully.",
-            user: newUser,
-        });
+        res.status(201).json(newProfile);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "An error occurred while creating the profile." });
+        console.error("Profile creation error:", error); 
+        res.status(400).json({ error: error.message });
     }
-};
-
+ };
+ 
 
 
 // Controller to update user profile
 const updateProfile = async (req, res) => {
     const { id } = req.params; // Extract the user profile ID from the URL parameters
-    const { name, phoneNumber, gender, userId } = req.body; // Remove email from req.body
+    const { name, phoneNumber, gender} = req.body; // Remove email from req.body
 
     try {
         // Check if the user profile exists
