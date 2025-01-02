@@ -4,14 +4,14 @@ const bcrypt = require('bcryptjs');
 
 // No authentication required for public profile creation (e.g., user registration)
 const createProfile = async (req, res) => {
-    const { name, phoneNumber, gender, email } = req.body;
+    const { name, phoneNumber,aboutYou } = req.body;
  
     try {
         const newProfile = await User.create({
             name,
             phoneNumber,
-            gender,
-            email,
+            aboutYou
+
         });
         res.status(201).json(newProfile);
     } catch (error) {

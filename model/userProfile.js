@@ -19,15 +19,11 @@ const userProfileSchema = new mongoose.Schema({
         unique: true,
         match: [/^\d{10}$/, 'Phone number must be 10 digits']
     },
-    gender: { 
+    aboutYou: { 
         type: String, 
         required: true 
     },
-    email: { 
-        type: String, 
-        required: true, 
-        unique: true 
-    },
+
 });
 
 const UserProfile = mongoose.model("userprofiles", userProfileSchema);
