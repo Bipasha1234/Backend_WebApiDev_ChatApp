@@ -10,7 +10,7 @@ const userSchema = Joi.object({
         .messages({
             "string.pattern.base": "Phone number must be exactly 10 digits."
         }),
-    aboutYou: Joi.string().required(),
+    aboutYou: Joi.string().optional(),
     
 });
 

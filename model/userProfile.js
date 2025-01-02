@@ -21,7 +21,7 @@ const userProfileSchema = new mongoose.Schema({
     },
     aboutYou: { 
         type: String, 
-        required: true 
+        required:false
     },
 
 });
