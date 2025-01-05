@@ -1,8 +1,10 @@
 const mongoose = require('mongoose');
 
 const credSchema = new mongoose.Schema({
+   
+    email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    email: { type: String, required: true, unique: true }, // Ensure uniqueness
+     // Ensure uniqueness
 
     createdAt: { type: Date, default: Date.now },
 });

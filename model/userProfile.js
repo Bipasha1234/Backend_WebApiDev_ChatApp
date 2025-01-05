@@ -5,10 +5,7 @@ const userProfileSchema = new mongoose.Schema({
     //     type: mongoose.Schema.Types.ObjectId,
     //     ref: 'creds', 
     // },
-    image: {
-        type: String,
-        required: false
-    },
+  
     name: {
         type: String,
         required: true
@@ -22,6 +19,10 @@ const userProfileSchema = new mongoose.Schema({
     aboutYou: { 
         type: String, 
         required:false
+    },
+    image: {
+        type: String,
+        required: false
     },
 
 });

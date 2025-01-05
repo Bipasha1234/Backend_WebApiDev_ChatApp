@@ -1,4 +1,5 @@
-const User = require("../model/credential.js");
+// const User = require("../model/credential.js");
+const User1 = require("../model/userProfile.js");
 const Message = require("../model/message.js");
 
 const cloudinary =require("../config/cloudinary.js");
@@ -8,7 +9,7 @@ const { getReceiverSocketId, io } = require("../config/socket.js");
  const getUsersForSidebar = async (req, res) => {
   try {
     const loggedInUserId = req.user._id;
-    const filteredUsers = await User.find({ _id: { $ne: loggedInUserId } }).select("-password");
+    const filteredUsers = await User1.find({ _id: { $ne: loggedInUserId } }).select("-password");
 
     res.status(200).json(filteredUsers);
   } catch (error) {

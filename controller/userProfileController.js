@@ -1,24 +1,43 @@
-const User = require('../model/userProfile');
+const UserProfile = require('../model/userProfile');
 const Credential = require('../model/credential'); 
 const bcrypt = require('bcryptjs');
+const cloudinary =require( "../config/cloudinary");
 
-// No authentication required for public profile creation (e.g., user registration)
 const createProfile = async (req, res) => {
-    const { name, phoneNumber,aboutYou } = req.body;
- 
     try {
-        const newProfile = await User.create({
-            name,
-            phoneNumber,
-            aboutYou
-
+      const { name, phoneNumber, aboutYou } = req.body;
+  
+      // Validate required fields
+      if (!name || !phoneNumber) {
+        return res.status(400).json({ message: "Name and phone number are required" });
+      }
+  
+      // Upload image to Cloudinary if provided
+      let imageUrl = null;
+      if (req.file) {
+        const uploadResponse = await cloudinary.uploader.upload(req.file.path, {
+          folder: "user_profiles", // Organize files in a specific folder
         });
-        res.status(201).json(newProfile);
+        imageUrl = uploadResponse.secure_url; // Get the uploaded image's URL
+      }
+  
+      // Create a new profile
+      const newProfile = new UserProfile({
+        name,
+        phoneNumber,
+        aboutYou,
+        image: imageUrl, 
+      });
+  
+      // Save to database
+      await newProfile.save();
+  
+      res.status(201).json({ message: "Profile created successfully", profile: newProfile });
     } catch (error) {
-        console.error("Profile creation error:", error); 
-        res.status(400).json({ error: error.message });
+      console.error("Error in createProfile:", error.message);
+      res.status(500).json({ message: "Internal server error" });
     }
- };
+  };
  
 
 
