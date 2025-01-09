@@ -198,55 +198,45 @@ const generateToken = require("../config/utils"); // Import the generateToken fu
 
 // Register a new user
 const register = async (req, res) => {
-  const { confirmPassword, email, password } = req.body;
-
+  const { fullName, email, password } = req.body;
   try {
-    // Validate required fields
-    if (!confirmPassword || !email || !password) {
+    if (!fullName || !email || !password) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    // Validate password length
     if (password.length < 6) {
       return res.status(400).json({ message: "Password must be at least 6 characters" });
     }
 
-    // Check if passwords match
-    if (password !== confirmPassword) {
-      return res.status(400).json({ message: "Passwords do not match" });
-    }
-
-    // Check if email already exists
     const user = await Credential.findOne({ email });
-    if (user) {
-      return res.status(400).json({ message: "Email already exists" });
-    }
 
-    // Hash the password
+    if (user) return res.status(400).json({ message: "Email already exists" });
+
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create a new user
     const newUser = new Credential({
+      fullName,
       email,
       password: hashedPassword,
     });
 
-    // Save the new user
-    await newUser.save();
+    if (newUser) {
+      // generate jwt token here
+      generateToken(newUser._id, res);
+      await newUser.save();
 
-    // Generate token after successful registration
-    const token = generateToken(newUser._id, res);
-
-    // Respond with user data and JWT token
-    res.status(201).json({
-      _id: newUser._id,
-      email: newUser.email,
-      token: token, // Send the generated JWT token
-    });
-
+      res.status(201).json({
+        _id: newUser._id,
+        fullName: newUser.fullName,
+        email: newUser.email,
+        profilePic: newUser.profilePic,
+      });
+    } else {
+      res.status(400).json({ message: "Invalid user data" });
+    }
   } catch (error) {
-    console.error("Error in signup controller:", error.message);
+    console.log("Error in signup controller", error.message);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
@@ -293,6 +283,29 @@ const logout = (req, res) => {
   }
 };
 
+const updateProfile = async (req, res) => {
+  try {
+    const { profilePic } = req.body;
+    const userId = req.user._id;
+
+    if (!profilePic) {
+      return res.status(400).json({ message: "Profile pic is required" });
+    }
+
+    const uploadResponse = await cloudinary.uploader.upload(profilePic);
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { profilePic: uploadResponse.secure_url },
+      { new: true }
+    );
+
+    res.status(200).json(updatedUser);
+  } catch (error) {
+    console.log("error in update profile:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 const checkAuth = (req, res) => {
   try {
     res.status(200).json(req.user);
@@ -307,4 +320,5 @@ module.exports = {
   login,
   logout,
   checkAuth,
+  updateProfile
 };

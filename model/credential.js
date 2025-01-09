@@ -1,14 +1,30 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const credSchema = new mongoose.Schema({
-   
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-     // Ensure uniqueness
+const userSchema = new mongoose.Schema(
+  {
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+    fullName: {
+      type: String,
+      required: true,
+    },
+    password: {
+      type: String,
+      required: true,
+      minlength: 6,
+    },
+    profilePic: {
+      type: String,
+      default: "",
+    },
+  },
+  { timestamps: true }
+);
 
-    createdAt: { type: Date, default: Date.now },
-});
+const User = mongoose.model("creds", userSchema);
 
-const Cred = mongoose.model('creds', credSchema);
 
-module.exports = Cred;
+module.exports = User;

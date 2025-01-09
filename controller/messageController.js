@@ -1,5 +1,4 @@
-// const User = require("../model/credential.js");
-const User1 = require("../model/userProfile.js");
+const User1 = require("../model/credential.js");
 const Message = require("../model/message.js");
 
 const cloudinary =require("../config/cloudinary.js");

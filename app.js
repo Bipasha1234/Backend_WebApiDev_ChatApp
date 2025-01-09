@@ -3,7 +3,6 @@ const cookieParser =require( "cookie-parser");
 const cors = require('cors');
 const connectDb = require('./config/db');
 const CustomerRouter = require('./routes/userRoute');
-const CustomerProfileRouter = require('./routes/userProfileRoute');
 const AuthRouter = require('./routes/authRoute');
 const MessageRouter = require('./routes/messageRoute');
 
@@ -52,7 +51,6 @@ app.use(
 
 // Routes setup
 app.use('/api/user', CustomerRouter);
-app.use('/api/user/profile', CustomerProfileRouter);
 app.use('/api/auth', AuthRouter);
 app.use('/api/messages', MessageRouter);
 
