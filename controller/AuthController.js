@@ -194,7 +194,8 @@
 
 const bcrypt = require('bcryptjs');
 const Credential = require("../model/credential");
-const generateToken = require("../config/utils"); // Import the generateToken function
+const generateToken = require("../config/utils");
+const cloudinary = require( "../config/cloudinary.js");
 
 // Register a new user
 const register = async (req, res) => {
@@ -293,7 +294,7 @@ const updateProfile = async (req, res) => {
     }
 
     const uploadResponse = await cloudinary.uploader.upload(profilePic);
-    const updatedUser = await User.findByIdAndUpdate(
+    const updatedUser = await Credential.findByIdAndUpdate(
       userId,
       { profilePic: uploadResponse.secure_url },
       { new: true }
