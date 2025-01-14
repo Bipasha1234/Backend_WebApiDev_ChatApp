@@ -5,6 +5,7 @@ const connectDb = require('./config/db');
 const CustomerRouter = require('./routes/userRoute');
 const AuthRouter = require('./routes/authRoute');
 const MessageRouter = require('./routes/messageRoute');
+const GroupRouter = require('./routes/groupRoute');
 
 const { app, server } =require( "./config/socket");
 const dotenv =require("dotenv");
@@ -53,6 +54,7 @@ app.use(
 app.use('/api/user', CustomerRouter);
 app.use('/api/auth', AuthRouter);
 app.use('/api/messages', MessageRouter);
+app.use('/api/groups', GroupRouter);
 
 // Start the server
 // const port = 3000;
