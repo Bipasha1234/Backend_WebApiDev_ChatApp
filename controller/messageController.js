@@ -22,9 +22,21 @@ const getUsersForSidebar = async (req, res) => {
       .sort({ createdAt: -1 }) // Sort by most recent
       .limit(1);
 
+      // Initialize latest message text as "No messages yet"
+      let latestMessageText = "No messages yet";
+
+      // If there's a latest message, update the text accordingly
+      if (latestMessage) {
+        if (latestMessage.text) {
+          latestMessageText = latestMessage.text; // For text messages
+        } else if (latestMessage.image) {
+          latestMessageText = "📷Photo"; // For image messages
+        }
+      }
+
       return {
         ...user.toObject(),
-        latestMessage: latestMessage ? latestMessage.text : "No messages yet",
+        latestMessage: latestMessageText, // Set the latest message text
         lastMessageTime: latestMessage ? latestMessage.createdAt : null, // Add lastMessageTime
       };
     }));

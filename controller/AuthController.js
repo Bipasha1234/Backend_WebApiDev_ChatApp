@@ -198,8 +198,51 @@ const generateToken = require("../config/utils");
 const cloudinary = require( "../config/cloudinary.js");
 
 // Register a new user
+// const register = async (req, res) => {
+//   const { fullName, email, password } = req.body;
+//   try {
+//     if (!fullName || !email || !password) {
+//       return res.status(400).json({ message: "All fields are required" });
+//     }
+
+//     if (password.length < 6) {
+//       return res.status(400).json({ message: "Password must be at least 6 characters" });
+//     }
+
+//     const user = await Credential.findOne({ email });
+
+//     if (user) return res.status(400).json({ message: "Email already exists" });
+
+//     const salt = await bcrypt.genSalt(10);
+//     const hashedPassword = await bcrypt.hash(password, salt);
+
+//     const newUser = new Credential({
+//       fullName,
+//       email,
+//       password: hashedPassword,
+//     });
+
+//     if (newUser) {
+//       // generate jwt token here
+//       generateToken(newUser._id, res);
+//       await newUser.save();
+
+//       res.status(201).json({
+//         _id: newUser._id,
+//         fullName: newUser.fullName,
+//         email: newUser.email,
+//         profilePic: newUser.profilePic,
+//       });
+//     } else {
+//       res.status(400).json({ message: "Invalid user data" });
+//     }
+//   } catch (error) {
+//     console.log("Error in signup controller", error.message);
+//     res.status(500).json({ message: "Internal Server Error" });
+//   }
+// };
 const register = async (req, res) => {
-  const { fullName, email, password } = req.body;
+  const { fullName, email, password,profilePic } = req.body;
   try {
     if (!fullName || !email || !password) {
       return res.status(400).json({ message: "All fields are required" });
@@ -220,6 +263,7 @@ const register = async (req, res) => {
       fullName,
       email,
       password: hashedPassword,
+      profilePic: profilePic || "",
     });
 
     if (newUser) {
@@ -243,6 +287,35 @@ const register = async (req, res) => {
 };
 
 // Login route
+// const login = async (req, res) => {
+//   const { email, password } = req.body;
+
+//   try {
+//     const user = await Credential.findOne({ email });
+
+//     if (!user) {
+//       return res.status(400).json({ message: "Invalid credentials" });
+//     }
+
+//     const isPasswordCorrect = await bcrypt.compare(password, user.password);
+//     if (!isPasswordCorrect) {
+//       return res.status(400).json({ message: "Invalid credentials" });
+//     }
+
+//     // Generate token after successful login
+//     const token = generateToken(user._id, res);
+//     // Respond with a success message and the generated token
+//     res.status(200).json({
+//       message: "Logged in successfully",
+//       token: token, // Send the generated JWT token
+//     });
+//   } catch (error) {
+//     console.log("Error in login controller", error.message);
+//     res.status(500).json({ message: "Internal Server Error" });
+//   }
+// };
+
+// Login route
 const login = async (req, res) => {
   const { email, password } = req.body;
 
@@ -259,19 +332,25 @@ const login = async (req, res) => {
     }
 
     // Generate token after successful login
-    const token = generateToken(user._id, res);
+    const token = generateToken(user._id, res); // Generate a JWT token
 
-    // Respond with a success message and the generated token
+    // Respond with user details and token
     res.status(200).json({
       message: "Logged in successfully",
       token: token, // Send the generated JWT token
+      user: {
+        _id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        profilePic: user.profilePic || "",
+      }
     });
-
   } catch (error) {
     console.log("Error in login controller", error.message);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
 
 // Logout route (Clear the cookie)
 const logout = (req, res) => {
@@ -307,6 +386,36 @@ const updateProfile = async (req, res) => {
   }
 };
 
+ const uploadImage =  (req, res) => {
+  // // check for the file size and send an error message
+  // if (req.file.size > process.env.MAX_FILE_UPLOAD) {
+  //   return res.status(400).send({
+  //     message: `Please upload an image less than ${process.env.MAX_FILE_UPLOAD}`,
+  //   });
+  // }
+
+  if (!req.file) {
+    return res.status(400).send({ message: "Please upload a file" });
+  }
+  res.status(200).json({
+    success: true,
+    data: req.file.filename,
+  });
+}
+// const uploadImage = (req, res) => {
+//   if (!req.file) {
+//     return res.status(400).send({ message: "Please upload a file" });
+//   }
+
+//   // Get the file name and create the full URL for accessing the image
+//   const imageUrl = `http://localhost:3000/uploads/${req.file.filename}`;
+
+//   res.status(200).json({
+//     success: true,
+//     data: imageUrl,  // Send the URL instead of the filename
+//   });
+// };
+
 const checkAuth = (req, res) => {
   try {
     res.status(200).json(req.user);
@@ -316,10 +425,25 @@ const checkAuth = (req, res) => {
   }
 };
 
+
+
+const getCurrentUser = async (req, res) => {
+  const user = await Credential.findById(req.user._id).select("-password");
+
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  res.status(200).json(user);
+};
+
+// Add getCurrentUser to the exported functions
 module.exports = {
   register,
   login,
   logout,
   checkAuth,
-  updateProfile
+  updateProfile,
+  uploadImage,
+  getCurrentUser, // ✅ Added getCurrentUser function
 };

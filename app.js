@@ -1,6 +1,7 @@
 const express = require('express');
 const cookieParser =require( "cookie-parser");
 const cors = require('cors');
+const path = require('path');
 const connectDb = require('./config/db');
 const CustomerRouter = require('./routes/userRoute');
 const AuthRouter = require('./routes/authRoute');
@@ -43,18 +44,22 @@ const PORT = process.env.PORT;
 
 // Middleware setup
 app.use(express.json());
+
+app.use(express.urlencoded({ extended: true })); // For form data
 app.use(
   cors({
     origin: "http://localhost:5173",
     credentials: true,
   })
 );
-
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 // Routes setup
 app.use('/api/user', CustomerRouter);
 app.use('/api/auth', AuthRouter);
 app.use('/api/messages', MessageRouter);
 app.use('/api/groups', GroupRouter);
+
+
 
 // Start the server
 // const port = 3000;

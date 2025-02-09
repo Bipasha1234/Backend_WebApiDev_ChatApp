@@ -22,6 +22,11 @@ const messageSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Virtual field to get message summary (text or "Photo")
+messageSchema.virtual("summary").get(function () {
+  return this.image ? "Photo" : this.text || "";
+});
+
 const Message = mongoose.model("messages", messageSchema);
 
 module.exports = Message;
