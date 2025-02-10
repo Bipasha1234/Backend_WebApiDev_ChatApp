@@ -72,16 +72,43 @@ const getMessages = async (req, res) => {
 // Send a message from the logged-in user to another user
 const sendMessage = async (req, res) => {
   try {
-    const { text, image } = req.body;
+    const { text, image, audio } = req.body;
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
 
     let imageUrl = "";
+    let audioUrl = "";
+
+    // Handle Image Upload
     if (image) {
-      // Upload base64 image to Cloudinary
-      const uploadResponse = await cloudinary.uploader.upload(image);
-      imageUrl = uploadResponse.secure_url;
+      if (typeof image === "string" && image.startsWith("data:image/")) {
+        console.log("Processing base64 image...");
+        const uploadResponse = await cloudinary.uploader.upload(image, { resource_type: "image" });
+        imageUrl = uploadResponse.secure_url;
+      } else {
+        console.log("Invalid image format");
+        return res.status(400).json({ error: "Invalid image format." });
+      }
     }
+
+    // Handle Audio Upload
+    if (audio) {
+      if (typeof audio === "string" && audio.startsWith("data:audio/")) {
+        console.log("Processing base64 audio...");
+        
+        try {
+          const uploadResponse = await cloudinary.uploader.upload(audio, { resource_type: "auto" });
+          console.log("Cloudinary Upload Response:", uploadResponse);
+          audioUrl = uploadResponse.secure_url;
+        } catch (error) {
+          console.error("Cloudinary Upload Failed:", error);
+        }
+      } else {
+        console.log("Invalid audio format");
+        return res.status(400).json({ error: "Invalid audio format." });
+      }
+    }
+    
 
     // Create and save the new message
     const newMessage = new Message({
@@ -89,11 +116,14 @@ const sendMessage = async (req, res) => {
       receiverId,
       text,
       image: imageUrl,
+      audio: audioUrl, // Store audio URL
     });
 
     await newMessage.save();
+    console.log("Received audio:", audio);
 
-    // Find the receiver's socket ID and emit the message via WebSockets
+
+    // Emit the message via WebSockets
     const receiverSocketId = getReceiverSocketId(receiverId);
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("newMessage", newMessage);
@@ -106,8 +136,143 @@ const sendMessage = async (req, res) => {
   }
 };
 
+
+
+
 module.exports = {
   getUsersForSidebar,
   getMessages,
   sendMessage,
 };
+// const User1 = require("../model/credential.js");
+// const Message = require("../model/message.js");
+// const cloudinary = require("../config/cloudinary.js");
+// const { getReceiverSocketId, io } = require("../config/socket.js");
+
+// const getUsersForSidebar = async (req, res) => {
+//   try {
+//     const loggedInUserId = req.user._id;
+
+//     // Get users excluding the logged-in user
+//     const filteredUsers = await User1.find({ _id: { $ne: loggedInUserId } })
+//       .select("-password");
+
+//     // Fetch the latest message for each user
+//     const usersWithLatestMessage = await Promise.all(filteredUsers.map(async (user) => {
+//       const latestMessage = await Message.findOne({
+//         $or: [
+//           { senderId: loggedInUserId, receiverId: user._id },
+//           { senderId: user._id, receiverId: loggedInUserId }
+//         ]
+//       })
+//       .sort({ createdAt: -1 }) // Sort by most recent
+//       .limit(1);
+
+//       // Initialize latest message text as "No messages yet"
+//       let latestMessageText = "No messages yet";
+
+//       // If there's a latest message, update the text accordingly
+//       if (latestMessage) {
+//         if (latestMessage.text) {
+//           latestMessageText = latestMessage.text; // For text messages
+//         } else if (latestMessage.image) {
+//           latestMessageText = "📷Photo"; // For image messages
+//         }
+//       }
+
+//       return {
+//         ...user.toObject(),
+//         latestMessage: latestMessageText, // Set the latest message text
+//         lastMessageTime: latestMessage ? latestMessage.createdAt : null, // Add lastMessageTime
+//       };
+//     }));
+
+//     res.status(200).json(usersWithLatestMessage);
+//   } catch (error) {
+//     console.error("Error in getUsersForSidebar: ", error.message);
+//     res.status(500).json({ error: "Internal server error" });
+//   }
+// };
+
+
+// // Get all messages between logged-in user and the user to chat with
+// const getMessages = async (req, res) => {
+//   try {
+//     const { id: userToChatId } = req.params;
+//     const myId = req.user._id;
+
+//     const messages = await Message.find({
+//       $or: [
+//         { senderId: myId, receiverId: userToChatId },
+//         { senderId: userToChatId, receiverId: myId },
+//       ],
+//     }).sort({ createdAt: 1 }); // Sort by ascending order of createdAt for the conversation flow
+
+//     res.status(200).json(messages);
+//   } catch (error) {
+//     console.log("Error in getMessages controller: ", error.message);
+//     res.status(500).json({ error: "Internal server error" });
+//   }
+// };
+
+// // Send a message from the logged-in user to another user
+// const sendMessage = async (req, res) => {
+//   try {
+//     const { text } = req.body;
+//     const { id: receiverId } = req.params;
+//     const senderId = req.user._id;
+
+//     let imageUrl = "";
+//     let documentUrl = "";
+
+//     // **🔹 Handle Image Upload (Base64 from Camera or Gallery)**
+//     if (req.body.image) {
+//       if (req.body.image.startsWith("data:image/")) {
+//         console.log("Processing base64 image...");
+//         const uploadResponse = await cloudinary.uploader.upload(req.body.image);
+//         imageUrl = uploadResponse.secure_url;
+//       } else {
+//         return res.status(400).json({ error: "Invalid image format." });
+//       }
+//     }
+
+//     // **🔹 Handle Document Upload (File via FormData)**
+//     if (req.file) {
+//       console.log("Processing document upload...");
+//       const docUploadResponse = await cloudinary.uploader.upload(req.file.path, {
+//         resource_type: "raw", // Allows all file types (PDF, DOCX, XLS, etc.)
+//         folder: "chat_documents", // Store in a specific folder
+//       });
+//       documentUrl = docUploadResponse.secure_url;
+//     }
+
+//     // **🔹 Create and Save the New Message**
+//     const newMessage = new Message({
+//       senderId,
+//       receiverId,
+//       text,
+//       image: imageUrl || null,
+//       document: documentUrl || null,
+//     });
+
+//     await newMessage.save();
+
+//     // **🔹 Emit Message via WebSockets**
+//     const receiverSocketId = getReceiverSocketId(receiverId);
+//     if (receiverSocketId) {
+//       io.to(receiverSocketId).emit("newMessage", newMessage);
+//     }
+
+//     res.status(201).json(newMessage);
+//   } catch (error) {
+//     console.error("Error in sendMessage controller:", error.message);
+//     res.status(500).json({ error: "Internal server error" });
+//   }
+// };
+
+
+// module.exports = {
+//   getUsersForSidebar,
+//   getMessages,
+//   sendMessage,
+// };
