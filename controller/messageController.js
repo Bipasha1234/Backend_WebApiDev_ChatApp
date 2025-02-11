@@ -55,52 +55,60 @@ const getMessages = async (req, res) => {
     const { id: userToChatId } = req.params;
     const myId = req.user._id;
 
+    // 🔹 Check if the user is blocked
+    const loggedInUser = await User1.findById(myId);
+    if (loggedInUser.blockedUsers.includes(userToChatId)) {
+      return res.status(403).json({ error: "You have blocked this user." });
+    }
+
     const messages = await Message.find({
       $or: [
         { senderId: myId, receiverId: userToChatId },
-        { senderId: userToChatId, receiverId: myId },
+        { senderId: userToChatId, receiverId: myId }
       ],
-    }).sort({ createdAt: 1 }); // Sort by ascending order of createdAt for the conversation flow
+    }).sort({ createdAt: 1 });
 
     res.status(200).json(messages);
   } catch (error) {
-    console.log("Error in getMessages controller: ", error.message);
+    console.log("Error in getMessages: ", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };
 
 const sendMessage = async (req, res) => {
   try {
-    const { text, image, audio, document, documentName } = req.body; 
+    const { text, image, audio, document, documentName } = req.body;
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
 
-    let imageUrl = "";
-    let audioUrl = "";
-    let documentUrl = "";
+    // 🔹 Check if sender is blocked by the receiver
+    const receiver = await User1.findById(receiverId);
+    if (receiver.blockedUsers.includes(senderId)) {
+      return res.status(403).json({ error: "You have been blocked by this user." });
+    }
 
+    // Proceed with sending message
+    let imageUrl = "", audioUrl = "", documentUrl = "";
     if (image && typeof image === "string" && image.startsWith("data:image/")) {
-      const uploadResponse = await cloudinary.uploader.upload(image, {
-        resource_type: "image",
-      });
+      const uploadResponse = await cloudinary.uploader.upload(image, { resource_type: "image" });
       imageUrl = uploadResponse.secure_url;
     }
+
     if (audio && typeof audio === "string" && audio.startsWith("data:audio/")) {
-      const uploadResponse = await cloudinary.uploader.upload(audio, {
-        resource_type: "auto",
-      });
+      const uploadResponse = await cloudinary.uploader.upload(audio, { resource_type: "auto" });
       audioUrl = uploadResponse.secure_url;
     }
 
     if (document && typeof document === "string") {
       const uploadResponse = await cloudinary.uploader.upload(document, {
-        resource_type: "raw", 
-        public_id: `documents/${Date.now()}-${documentName.split(".")[0]}`, // Keep original filename
+        resource_type: "raw",
+        public_id: `documents/${Date.now()}-${documentName.split(".")[0]}`,
         use_filename: true,
         unique_filename: false,
       });
       documentUrl = uploadResponse.secure_url;
     }
+
     const newMessage = new Message({
       senderId,
       receiverId,
@@ -108,23 +116,100 @@ const sendMessage = async (req, res) => {
       image: imageUrl || null,
       audio: audioUrl || null,
       document: documentUrl || null,
-      documentName: documentName || null, // Save document name
+      documentName: documentName || null,
     });
 
     await newMessage.save();
 
     res.status(201).json(newMessage);
   } catch (error) {
-    console.error("Error in sendMessage controller:", error.message);
+    console.error("Error in sendMessage:", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };
 
 
+
+const deleteChat = async (req, res) => {
+  try {
+    const { id: userToDelete } = req.params;
+    const loggedInUserId = req.user._id;
+
+    await Message.deleteMany({
+      $or: [
+        { senderId: loggedInUserId, receiverId: userToDelete },
+        { senderId: userToDelete, receiverId: loggedInUserId }
+      ],
+    });
+
+    res.status(200).json({ message: "Chat deleted successfully" });
+  } catch (error) {
+    console.error("Error in deleteChat:", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+const blockUser = async (req, res) => {
+  try {
+    const { id: userId } = req.params;
+    const loggedInUserId = req.user._id;
+
+    await User1.findByIdAndUpdate(
+      loggedInUserId,
+      { $addToSet: { blockedUsers: userId } },
+      { new: true }
+    );
+
+    const updatedUser = await User1.findById(loggedInUserId).populate("blockedUsers", "fullName _id");
+    res.status(200).json({ blockedUsers: updatedUser.blockedUsers });
+  } catch (error) {
+    console.error("Error blocking user:", error);
+    res.status(500).json({ message: "Failed to block user" });
+  }
+};
+
+const unblockUser = async (req, res) => {
+  try {
+    const { id: userId } = req.params; 
+    const loggedInUserId = req.user._id;
+
+    await User1.findByIdAndUpdate(
+      loggedInUserId,
+      { $pull: { blockedUsers: userId } }, 
+      { new: true }
+    );
+
+    const updatedUser = await User1.findById(loggedInUserId).populate("blockedUsers", "fullName _id profilePic");
+    const unblockedUser = await User1.findById(userId).select("fullName _id profilePic");
+
+    return res.status(200).json({
+      blockedUsers: updatedUser.blockedUsers, 
+      unblockedUser, 
+    });
+  } catch (error) {
+    console.error("Error unblocking user:", error);
+    return res.status(500).json({ message: "Failed to unblock user" });
+  }
+};
+
+const getBlockedUsers = async (req, res) => {
+  try {
+    const loggedInUser = await User1.findById(req.user._id).populate("blockedUsers", "fullName _id");
+    res.status(200).json({ blockedUsers: loggedInUser.blockedUsers });
+  } catch (error) {
+    console.error("Error fetching blocked users:", error);
+    res.status(500).json({ message: "Failed to fetch blocked users" });
+  }
+};
+
 module.exports = {
   getUsersForSidebar,
   getMessages,
   sendMessage,
+  deleteChat, 
+  blockUser, 
+  unblockUser,
+  getBlockedUsers  
 };
 // const User1 = require("../model/credential.js");
 // const Message = require("../model/message.js");
