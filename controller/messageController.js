@@ -69,74 +69,56 @@ const getMessages = async (req, res) => {
   }
 };
 
-// Send a message from the logged-in user to another user
 const sendMessage = async (req, res) => {
   try {
-    const { text, image, audio } = req.body;
+    const { text, image, audio, document, documentName } = req.body; 
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
 
     let imageUrl = "";
     let audioUrl = "";
+    let documentUrl = "";
 
-    // Handle Image Upload
-    if (image) {
-      if (typeof image === "string" && image.startsWith("data:image/")) {
-        console.log("Processing base64 image...");
-        const uploadResponse = await cloudinary.uploader.upload(image, { resource_type: "image" });
-        imageUrl = uploadResponse.secure_url;
-      } else {
-        console.log("Invalid image format");
-        return res.status(400).json({ error: "Invalid image format." });
-      }
+    if (image && typeof image === "string" && image.startsWith("data:image/")) {
+      const uploadResponse = await cloudinary.uploader.upload(image, {
+        resource_type: "image",
+      });
+      imageUrl = uploadResponse.secure_url;
+    }
+    if (audio && typeof audio === "string" && audio.startsWith("data:audio/")) {
+      const uploadResponse = await cloudinary.uploader.upload(audio, {
+        resource_type: "auto",
+      });
+      audioUrl = uploadResponse.secure_url;
     }
 
-    // Handle Audio Upload
-    if (audio) {
-      if (typeof audio === "string" && audio.startsWith("data:audio/")) {
-        console.log("Processing base64 audio...");
-        
-        try {
-          const uploadResponse = await cloudinary.uploader.upload(audio, { resource_type: "auto" });
-          console.log("Cloudinary Upload Response:", uploadResponse);
-          audioUrl = uploadResponse.secure_url;
-        } catch (error) {
-          console.error("Cloudinary Upload Failed:", error);
-        }
-      } else {
-        console.log("Invalid audio format");
-        return res.status(400).json({ error: "Invalid audio format." });
-      }
+    if (document && typeof document === "string") {
+      const uploadResponse = await cloudinary.uploader.upload(document, {
+        resource_type: "raw", 
+        public_id: `documents/${Date.now()}-${documentName.split(".")[0]}`, // Keep original filename
+        use_filename: true,
+        unique_filename: false,
+      });
+      documentUrl = uploadResponse.secure_url;
     }
-    
-
-    // Create and save the new message
     const newMessage = new Message({
       senderId,
       receiverId,
       text,
-      image: imageUrl,
-      audio: audioUrl, // Store audio URL
+      image: imageUrl || null,
+      audio: audioUrl || null,
+      document: documentUrl || null,
+      documentName: documentName || null, // Save document name
     });
 
     await newMessage.save();
-    console.log("Received audio:", audio);
-
-
-    // Emit the message via WebSockets
-    const receiverSocketId = getReceiverSocketId(receiverId);
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("newMessage", newMessage);
-    }
 
     res.status(201).json(newMessage);
   } catch (error) {
-    console.log("Error in sendMessage controller: ", error.message);
+    console.error("Error in sendMessage controller:", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };
-
-
 
 
 module.exports = {

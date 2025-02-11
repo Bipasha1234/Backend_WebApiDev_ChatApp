@@ -18,6 +18,15 @@ const messageSchema = new mongoose.Schema(
     image: {
       type: String,
     },
+    
+    audio: { type: String, default: "" },
+    document: {
+      type: String,
+    },
+    documentName: {
+      type: String,
+      default: "Document",
+    },
   },
   { timestamps: true }
 );
