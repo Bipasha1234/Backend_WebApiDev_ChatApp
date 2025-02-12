@@ -8,38 +8,52 @@ const getUsersForSidebar = async (req, res) => {
     const loggedInUserId = req.user._id;
 
     // Get users excluding the logged-in user
-    const filteredUsers = await User1.find({ _id: { $ne: loggedInUserId } })
-      .select("-password");
+    const filteredUsers = await User1.find({ _id: { $ne: loggedInUserId } }).select("-password");
 
     // Fetch the latest message for each user
-    const usersWithLatestMessage = await Promise.all(filteredUsers.map(async (user) => {
-      const latestMessage = await Message.findOne({
-        $or: [
-          { senderId: loggedInUserId, receiverId: user._id },
-          { senderId: user._id, receiverId: loggedInUserId }
-        ]
-      })
-      .sort({ createdAt: -1 }) // Sort by most recent
-      .limit(1);
+    const usersWithLatestMessage = await Promise.all(
+      filteredUsers.map(async (user) => {
+        const latestMessage = await Message.findOne({
+          $or: [
+            { senderId: loggedInUserId, receiverId: user._id },
+            { senderId: user._id, receiverId: loggedInUserId },
+          ],
+        })
+          .sort({ createdAt: -1 }) // Sort by most recent
+          .limit(1);
 
-      // Initialize latest message text as "No messages yet"
-      let latestMessageText = "No messages yet";
+        let latestMessageText = "No messages yet";
+        let isUnread = false; // Track unread status
 
-      // If there's a latest message, update the text accordingly
-      if (latestMessage) {
-        if (latestMessage.text) {
-          latestMessageText = latestMessage.text; // For text messages
-        } else if (latestMessage.image) {
-          latestMessageText = "📷Photo"; // For image messages
+        // Determine the message type
+        if (latestMessage) {
+          if (latestMessage.text) {
+            latestMessageText = latestMessage.text;
+          } else if (latestMessage.image) {
+            latestMessageText = "📷 Photo";
+          } else if (latestMessage.audio) {
+            latestMessageText = "🎵 Audio";
+          } else if (latestMessage.document) {
+            latestMessageText = "📄 Document";
+          }
+
+          // Mark as unread if the message is from the other user and not seen
+          if (latestMessage.receiverId.toString() === loggedInUserId.toString() && !latestMessage.isSeen) {
+            isUnread = true;
+          }
         }
-      }
 
-      return {
-        ...user.toObject(),
-        latestMessage: latestMessageText, // Set the latest message text
-        lastMessageTime: latestMessage ? latestMessage.createdAt : null, // Add lastMessageTime
-      };
-    }));
+        return {
+          ...user.toObject(),
+          latestMessage: latestMessageText,
+          lastMessageTime: latestMessage ? latestMessage.createdAt : null,
+          isUnread, // Add unread status
+        };
+      })
+    );
+
+    // Sort users based on the latest message timestamp (newest first)
+    usersWithLatestMessage.sort((a, b) => (b.lastMessageTime || 0) - (a.lastMessageTime || 0));
 
     res.status(200).json(usersWithLatestMessage);
   } catch (error) {
@@ -47,6 +61,24 @@ const getUsersForSidebar = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+const markMessagesAsSeen = async (req, res) => {
+  try {
+    const { senderId } = req.body; // Sender whose messages should be marked as read
+    const receiverId = req.user._id; // The logged-in user (recipient)
+
+    await Message.updateMany(
+      { senderId, receiverId, isSeen: false },
+      { $set: { isSeen: true } }
+    );
+
+    res.status(200).json({ success: true, message: "Messages marked as seen" });
+  } catch (error) {
+    console.error("Error marking messages as seen:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
 
 
 // Get all messages between logged-in user and the user to chat with
@@ -209,7 +241,8 @@ module.exports = {
   deleteChat, 
   blockUser, 
   unblockUser,
-  getBlockedUsers  
+  getBlockedUsers  ,
+  markMessagesAsSeen
 };
 // const User1 = require("../model/credential.js");
 // const Message = require("../model/message.js");

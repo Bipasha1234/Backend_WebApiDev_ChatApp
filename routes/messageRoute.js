@@ -4,7 +4,8 @@ const protectRoute=require("../security/Auth");
 const {
    getMessages, getUsersForSidebar, sendMessage,deleteChat,blockUser,
    unblockUser,
-   getBlockedUsers
+   getBlockedUsers,
+   markMessagesAsSeen
   } = require("../controller/messageController");
 
 const router = express.Router();
@@ -16,5 +17,7 @@ router.delete("/delete/:id", protectRoute, deleteChat);
 router.post("/users/block/:id", protectRoute, blockUser); 
 router.post("/users/unblock/:id", protectRoute, unblockUser); 
 router.get("/users/blocked", protectRoute, getBlockedUsers); 
+router.post("/mark-seen", protectRoute, markMessagesAsSeen);
+
 
 module.exports= router;
