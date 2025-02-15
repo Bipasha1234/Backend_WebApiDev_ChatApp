@@ -1,7 +1,9 @@
 const Group = require("../model/group");
 const User = require("../model/credential");
+const Message=require("../model/message.js")
 const cloudinary = require("../config/cloudinary");  
 const mongoose = require("mongoose");
+const { getReceiverSocketId, io } = require("../config/socket.js");
 
 const sendGroupMessage = async (req, res) => {
   try {
@@ -39,13 +41,11 @@ const sendGroupMessage = async (req, res) => {
       audio: audioUrl,
       document: documentUrl,
       documentName: documentName || null,
-      
-      createdAt: new Date(),
+      createdAt: new Date(), 
     };
 
     group.messages.push(newMessage);
     await group.save();
-
     await group.populate('messages.senderId', 'fullName profilePic');
 
     res.status(201).json({
@@ -78,6 +78,7 @@ const createGroup = async (req, res) => {
       members: [userId, ...members],
       createdBy: userId,
       admin: userId, 
+      
     });
 
     await newGroup.save();
@@ -97,13 +98,59 @@ const getGroups = async (req, res) => {
 
     const groups = await Group.find({ members: userId })
       .populate("members", "fullName profilePic")
-      .populate("admin", "fullName profilePic"); 
+      .populate("admin", "fullName profilePic")
+      .populate({
+        path: "messages.senderId",
+        select: "fullName profilePic",
+      })
+      .select("name profilePic messages members createdAt") // Make sure to include 'createdAt'
+      .lean();
 
-    res.status(200).json(groups);
+    // Extract latest message and check type
+    const formattedGroups = groups.map((group) => {
+      const latestMessage = group.messages.length > 0 ? group.messages[group.messages.length - 1] : null;
+
+      let latestMessageText = null;
+      let messageType = "text";
+
+      if (latestMessage) {
+        if (latestMessage.text) {
+          latestMessageText = latestMessage.text;
+          messageType = "text";
+        } else if (latestMessage.image) {
+          latestMessageText = "📷 Photo";
+          messageType = "image";
+        } else if (latestMessage.audio) {
+          latestMessageText = "🎵 Audio";
+          messageType = "audio";
+        } else if (latestMessage.document) {
+          latestMessageText = "📄 Document";
+          messageType = "document";
+        }
+      }
+
+      return {
+        ...group,
+        latestMessage: latestMessage
+          ? {
+              text: latestMessageText,
+              type: messageType,
+              sender: latestMessage.senderId.fullName,
+            }
+          : null,
+        groupCreatedAt: group.createdAt, // Add group creation timestamp here
+      };
+    });
+
+    res.status(200).json(formattedGroups);
   } catch (error) {
+    console.error("Error fetching groups:", error);
     res.status(500).json({ message: "Error fetching groups", error });
   }
 };
+
+
+
 
 const getGroupMessages = async (req, res) => {
   try {
@@ -172,19 +219,25 @@ const leaveGroup = async (req, res) => {
     const { groupId } = req.params;
     const userId = req.user._id;
 
+    // Find the group by ID
     const group = await Group.findById(groupId);
     if (!group) return res.status(404).json({ error: "Group not found" });
 
+    // Remove user from the group members
     group.members = group.members.filter(member => member.toString() !== userId.toString());
 
+    // If there are no members left, delete the group
     if (group.members.length === 0) {
       await Group.findByIdAndDelete(groupId);
+      return res.status(200).json({ message: "Group deleted as it had no members left" });
     } else {
+      // Save the group if there are still members
       await group.save();
     }
 
-    res.status(200).json({ message: "Left the group", group });
+    res.status(200).json({ message: "Successfully left the group" });
   } catch (error) {
+    console.error("Error leaving the group:", error); // Log the error for debugging
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -244,6 +297,7 @@ const updateGroupName = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 module.exports = {
   createGroup,

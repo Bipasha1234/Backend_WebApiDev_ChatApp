@@ -38,8 +38,8 @@ const groupSchema = new mongoose.Schema(
         createdAt: { type: Date, default: Date.now },
       },
     ],
-  },
-  { timestamps: true }
+    createdAt: { type: Date, default: Date.now },
+  }
 );
 
 const Group = mongoose.model("groups", groupSchema);

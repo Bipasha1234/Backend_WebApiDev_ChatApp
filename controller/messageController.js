@@ -59,6 +59,8 @@ const getUsersForSidebar = async (req, res) => {
     // ✅ Sort users based on the latest message timestamp (newest first)
     usersWithLatestMessage.sort((a, b) => (b.lastMessageTime || 0) - (a.lastMessageTime || 0));
 
+    
+
     res.status(200).json(usersWithLatestMessage);
   } catch (error) {
     console.error("Error in getUsersForSidebar: ", error.message);
@@ -171,6 +173,12 @@ const sendMessage = async (req, res) => {
     });
 
     await newMessage.save();
+    const receiverSocketId = getReceiverSocketId(receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("newMessage", newMessage);
+    }
+
+    
 
     res.status(201).json(newMessage);
   } catch (error) {
