@@ -196,6 +196,14 @@ const bcrypt = require('bcryptjs');
 const Credential = require("../model/credential");
 const generateToken = require("../config/utils");
 const cloudinary = require( "../config/cloudinary.js");
+const crypto = require("crypto");
+const nodemailer = require("nodemailer");
+const dotenv = require("dotenv");  // CommonJS for dotenv
+
+// Load environment variables
+dotenv.config();
+// const { sendVerificationEmail } = require('../utils/emailService');
+// const { generateVerificationCode } = require('../Utils/emailVerification.js');
 
 // Register a new user
 // const register = async (req, res) => {
@@ -365,26 +373,58 @@ const logout = (req, res) => {
 
 const updateProfile = async (req, res) => {
   try {
-    const { profilePic } = req.body;
-    const userId = req.user._id;
+    const { email, fullName, profilePic } = req.body;
+    const userId = req.user._id; // Assuming the user ID is retrieved from authentication middleware
 
-    if (!profilePic) {
-      return res.status(400).json({ message: "Profile pic is required" });
+    // Initialize update fields object
+    const updateFields = {};
+
+    // Check if profilePic is provided and upload it to Cloudinary
+    if (profilePic) {
+      try {
+        const uploadResponse = await cloudinary.uploader.upload(profilePic, {
+          folder: "user_profile_pics", // Optional folder in Cloudinary
+          transformation: [{ width: 150, height: 150, crop: "fill" }], // Optional image transformation
+        });
+        updateFields.profilePic = uploadResponse.secure_url; // Store the Cloudinary URL
+      } catch (cloudinaryError) {
+        return res.status(500).json({ message: "Error uploading profile picture", error: cloudinaryError.message });
+      }
     }
 
-    const uploadResponse = await cloudinary.uploader.upload(profilePic);
+    // Update fields if provided
+    if (email) {
+      updateFields.email = email;
+    }
+
+    if (fullName) {
+      updateFields.fullName = fullName;
+    }
+
+    // If no fields to update, return a message
+    if (Object.keys(updateFields).length === 0) {
+      return res.status(400).json({ message: "No fields to update" });
+    }
+
+    // Update the user profile with the fields that are provided
     const updatedUser = await Credential.findByIdAndUpdate(
       userId,
-      { profilePic: uploadResponse.secure_url },
+      updateFields,
       { new: true }
     );
 
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Return the updated user details as a response
     res.status(200).json(updatedUser);
   } catch (error) {
-    console.log("error in update profile:", error);
-    res.status(500).json({ message: "Internal server error" });
+    console.error("Error in updating profile:", error);
+    res.status(500).json({ message: "Internal server error", error: error.message });
   }
 };
+
 
  const uploadImage =  (req, res) => {
   // // check for the file size and send an error message
@@ -437,6 +477,115 @@ const getCurrentUser = async (req, res) => {
   res.status(200).json(user);
 };
 
+
+
+// Create transporter
+const transporter = nodemailer.createTransport({
+  service: "Gmail",
+  auth: {
+    user: process.env.EMAIL_USER, // Your email
+    pass: process.env.EMAIL_PASS, // Your email password
+  },
+});
+
+// Forgot Password - Generates reset code and sends it via email
+const forgotPassword = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await Credential.findOne({ email });
+
+    if (!user) {
+      return res.status(400).json({ message: "User with this email does not exist" });
+    }
+
+    // Generate a 6-digit reset code
+    const resetCode = String(crypto.randomInt(100000, 1000000));
+
+    // Hash the reset code before storing (better security)
+    const hashedResetCode = await bcrypt.hash(resetCode, 10);
+
+    // Store hashed reset code and expiration (valid for 15 minutes)
+    user.resetCode = hashedResetCode;
+    user.resetCodeExpires = Date.now() + 15 * 60 * 1000;
+    await user.save();
+
+    // Send reset code via email
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: user.email,
+      subject: "Password Reset Code",
+      text: `Your password reset code is: ${resetCode}`,
+    });
+
+    res.status(200).json({ message: "Reset code sent to your email" });
+
+  } catch (error) {
+    console.error("Error in forgotPassword:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+// Verify Reset Code Controller
+const verifyResetCode = async (req, res) => {
+  const { email, resetCode } = req.body;
+
+  try {
+    // Find user by email
+    const user = await Credential.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
+
+    // Check if reset code is expired
+    if (!user.resetCode || !user.resetCodeExpires || Date.now() > user.resetCodeExpires) {
+      return res.status(400).json({ message: "Invalid or expired reset code" });
+    }
+
+    // Compare the entered reset code with the hashed one in the database
+    const isMatch = await bcrypt.compare(resetCode, user.resetCode);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid reset code" });
+    }
+
+    // Nullify reset code and expiration after verification
+    user.resetCode = null;
+    user.resetCodeExpires = null;
+    await user.save();
+
+    res.status(200).json({ message: "Reset code verified successfully. You can now reset your password." });
+  } catch (error) {
+    console.error("Error in verifyResetCode:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+// Reset Password Controller
+const resetPassword = async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    // Find user by email
+    const user = await Credential.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Update the user's password
+    user.password = hashedPassword;
+    await user.save();
+
+    res.status(200).json({ message: "Password reset successfully" });
+  } catch (error) {
+    console.error("Error in resetPassword:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+
 // Add getCurrentUser to the exported functions
 module.exports = {
   register,
@@ -445,5 +594,8 @@ module.exports = {
   checkAuth,
   updateProfile,
   uploadImage,
-  getCurrentUser, // ✅ Added getCurrentUser function
+  getCurrentUser, 
+  forgotPassword,
+  resetPassword,
+  verifyResetCode// ✅ Added getCurrentUser function
 };

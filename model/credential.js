@@ -20,13 +20,24 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
-    blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, 
-      ref: "creds" }] 
+    blockedUsers: [
+      { 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: "creds" 
+      }
+    ],
+    resetCode: {
+      type: String,  // The hashed reset code
+      default: null,
+    },
+    resetCodeExpires: {
+      type: Date,  // The expiration time of the reset code
+      default: null,
+    },
   },
   { timestamps: true }
 );
 
 const User = mongoose.model("creds", userSchema);
-
 
 module.exports = User;
