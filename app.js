@@ -67,6 +67,10 @@ app.use('/api/groups', GroupRouter);
 //   console.log(`Server running at http://localhost:${port}`);
 // });
 
+
+
+module.exports = app; 
+
 server.listen(PORT, () => {
   console.log("server is running on PORT:" + PORT);
   

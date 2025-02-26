@@ -250,8 +250,10 @@ dotenv.config();
 //   }
 // };
 const register = async (req, res) => {
-  const { fullName, email, password,profilePic } = req.body;
+  const { fullName, email, password, profilePic } = req.body;
+
   try {
+    // Validation
     if (!fullName || !email || !password) {
       return res.status(400).json({ message: "All fields are required" });
     }
@@ -260,13 +262,15 @@ const register = async (req, res) => {
       return res.status(400).json({ message: "Password must be at least 6 characters" });
     }
 
+    // Check if the user already exists
     const user = await Credential.findOne({ email });
-
     if (user) return res.status(400).json({ message: "Email already exists" });
 
+    // Hash the password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    // Create new user
     const newUser = new Credential({
       fullName,
       email,
@@ -274,12 +278,17 @@ const register = async (req, res) => {
       profilePic: profilePic || "",
     });
 
+    // If user creation is successful
     if (newUser) {
-      // generate jwt token here
+      // Generate JWT token
       generateToken(newUser._id, res);
+
+      // Save the user to the database
       await newUser.save();
 
+      // Send success response with user details and a success message
       res.status(201).json({
+        message: "User registered successfully",  // Add this message here
         _id: newUser._id,
         fullName: newUser.fullName,
         email: newUser.email,
