@@ -10,8 +10,8 @@ describe('Auth Routes', () => {
 
   // Test User data
   const user = {
-    email: 'test@example.com',
-    password: 'password123',
+    email: 'bladhhvdfdj@gmail.com',
+    password: '123456',
     fullName: 'Test User'
   };
 

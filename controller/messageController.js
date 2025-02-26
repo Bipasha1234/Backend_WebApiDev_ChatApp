@@ -186,7 +186,7 @@ const getMessages = async (req, res) => {
       deletedBy: { $ne: loggedInUserId } // ✅ Exclude messages deleted by this user
     }).sort({ createdAt: 1 });
 
-    res.status(200).json(messages);
+    res.status(200).json(messages || []);
   } catch (error) {
     console.error("Error in getMessages:", error.message);
     res.status(500).json({ error: "Internal server error" });
@@ -290,7 +290,12 @@ const sendMessage = async (req, res) => {
       io.to(receiverSocketId).emit("newMessage", newMessage);
     }
 
-    res.status(201).json(newMessage);
+    res.status(201).json({ 
+      success: true, 
+      message: "Message sent successfully", 
+      data: newMessage 
+    });
+    
   } catch (error) {
     console.error("Error in sendMessage:", error.message);
     res.status(500).json({ error: "Internal server error" });
