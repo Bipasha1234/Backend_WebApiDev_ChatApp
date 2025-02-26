@@ -1,14 +1,13 @@
 const chai = require('chai');
 const chaiHttp = require('chai-http');
-const  app  = require('../app');  // Adjust the path to your Express app file
+const  app  = require('../app');  
 const { expect } = chai;
 
 chai.use(chaiHttp);
 
 describe('Auth Routes', () => {
-  let token; // To store the token for authentication
+  let token; 
 
-  // Test User data
   const user = {
     email: 'bladhhvdfdj@gmail.com',
     password: '123456',
@@ -18,23 +17,19 @@ describe('Auth Routes', () => {
   // Test case: Register a new user
   describe('POST /register', () => {
     it('should register a new user', async () => {
-      // Define a sample user object with the necessary fields for registration
       const user = {
         fullName: 'BBBB LLL',
         email: 'bladhhvdfdj@gmail.com',
         password: '123456',
         profilePic:''
       };
-      console.log("Before making the request");
       // Make the request to register the user
       const res = await chai.request(app)
         .post('/api/auth/register')
         .send(user);  // Send the user object in the request body
-  
 
-        console.log(res.body);
       // Verify the response
-      expect(res.status).to.equal(201);  // Ensure status is 201 Created
+      expect(res.status).to.equal(201); 
       expect(res.body.message).to.equal('User registered successfully');
     });
 
@@ -63,7 +58,7 @@ describe('Auth Routes', () => {
 
       expect(res.status).to.equal(200);
       expect(res.body.token).to.be.a('string');
-      token = res.body.token; // Save the token for further tests
+      token = res.body.token; 
     });
 
     it('should return an error for incorrect credentials', async () => {
@@ -102,18 +97,7 @@ describe('Auth Routes', () => {
     });
   });
 
-  // Test case: Update user profile
   describe('PUT /update-profile', () => {
-    // it('should update the user profile', async () => {
-    //   const res = await chai.request(app)
-    //     .put('/api/auth/update-profile')
-    //     .set('Authorization', `Bearer ${token}`)
-    //     .send(updatedProfile);
-
-    //   expect(res.status).to.equal(500);
-    //   expect(res.body.message).to.equal('Profile updated successfully');
-    //   expect(res.body.user.fullName).to.equal(updatedProfile.fullName);
-    // });
 
     it('should return an error for missing fields', async () => {
       const res = await chai.request(app)

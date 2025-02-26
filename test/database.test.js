@@ -12,7 +12,7 @@ describe("Database Connection", function () {
     it("should connect to MongoDB successfully", async function () {
         const mockConnect = sinon.stub(mongoose, "connect").resolves();
         await connectDB();
-        expect(mockConnect.calledOnce).to.be.true;  // Check if the 'connect' method was called once
+        expect(mockConnect.calledOnce).to.be.true;  
     });
 
     it("should fail to connect to MongoDB", async function () {
@@ -20,8 +20,8 @@ describe("Database Connection", function () {
         try {
             await connectDB();  // This should throw an error due to rejection
         } catch (error) {
-            expect(error.message).to.equal("Connection failed");  // Make sure the error is correctly thrown
+            expect(error.message).to.equal("Connection failed");  
         }
-        expect(mockConnect.calledOnce).to.be.true;  // Check if the 'connect' method was called once
+        expect(mockConnect.calledOnce).to.be.true;  
     });
 });
