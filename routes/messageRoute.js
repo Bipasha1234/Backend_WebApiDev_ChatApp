@@ -12,8 +12,9 @@ const {
 const router = express.Router();
 
 router.get("/users", protectRoute,getUsersForSidebar);
-router.get("/:id",protectRoute, getMessages);
-router.post("/send/:id",protectRoute, sendMessage);
+router.get("/:chatPartnerId",protectRoute, getMessages);
+// router.post("/send/:id",protectRoute, sendMessage);
+router.post("/send",protectRoute, sendMessage);
 router.delete("/delete/:id", protectRoute, deleteChat); 
 router.post("/users/block/:id", protectRoute, blockUser); 
 router.post("/users/unblock/:id", protectRoute, unblockUser); 

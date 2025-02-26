@@ -3,12 +3,81 @@ const Message = require("../model/message.js");
 const cloudinary = require("../config/cloudinary.js");
 const { getReceiverSocketId, io } = require("../config/socket.js");
 
+// const getUsersForSidebar = async (req, res) => {
+//   try {
+//     const loggedInUserId = req.user._id;
+
+//     // Get users excluding the logged-in user
+//     const filteredUsers = await User1.find({ _id: { $ne: loggedInUserId } }).select("-password");
+
+//     // Fetch the latest message for each user, excluding deleted messages
+//     const usersWithLatestMessage = await Promise.all(
+//       filteredUsers.map(async (user) => {
+//         const latestMessage = await Message.findOne({
+//           $or: [
+//             { senderId: loggedInUserId, receiverId: user._id },
+//             { senderId: user._id, receiverId: loggedInUserId },
+//           ],
+//           deletedBy: { $ne: loggedInUserId }, // ✅ Exclude messages deleted by the logged-in user
+//         })
+//           .sort({ createdAt: -1 }) // Sort by most recent
+//           .limit(1);
+
+//         let latestMessageText = "No messages yet";
+//         let isUnread = false; // Track unread status
+
+//         // ✅ Determine the message type
+//         if (latestMessage) {
+//           if (latestMessage.text) {
+//             latestMessageText = latestMessage.text;
+//           } else if (latestMessage.image) {
+//             latestMessageText = "📷 Photo";
+//           } else if (latestMessage.audio) {
+//             latestMessageText = "🎵 Audio";
+//           } else if (latestMessage.document) {
+//             latestMessageText = "📄 Document";
+//           }
+
+//           // ✅ Mark as unread if the message is from the other user and not seen
+//           if (
+//             latestMessage.receiverId.toString() === loggedInUserId.toString() &&
+//             !latestMessage.isSeen
+//           ) {
+//             isUnread = true;
+//           }
+//         }
+
+//         return {
+//           ...user.toObject(),
+//           latestMessage: latestMessage ? latestMessageText : "No messages ", // ✅ Ensure correct display
+//           lastMessageTime: latestMessage ? latestMessage.createdAt : null,
+//           isUnread, // ✅ Add unread status
+//         };
+//       })
+//     );
+
+//     // ✅ Sort users based on the latest message timestamp (newest first)
+//     usersWithLatestMessage.sort((a, b) => (b.lastMessageTime || 0) - (a.lastMessageTime || 0));
+
+    
+
+//     res.status(200).json(usersWithLatestMessage);
+//   } catch (error) {
+//     console.error("Error in getUsersForSidebar: ", error.message);
+//     res.status(500).json({ error: "Internal server error" });
+//   }
+// };
 const getUsersForSidebar = async (req, res) => {
   try {
     const loggedInUserId = req.user._id;
 
-    // Get users excluding the logged-in user
-    const filteredUsers = await User1.find({ _id: { $ne: loggedInUserId } }).select("-password");
+    // Get the list of blocked users for the logged-in user
+    const loggedInUser = await User1.findById(loggedInUserId).select("blockedUsers");
+
+    // Get users excluding the logged-in user and those who are blocked
+    const filteredUsers = await User1.find({
+      _id: { $ne: loggedInUserId, $nin: loggedInUser.blockedUsers }, // Exclude logged-in user and blocked users
+    }).select("-password");
 
     // Fetch the latest message for each user, excluding deleted messages
     const usersWithLatestMessage = await Promise.all(
@@ -49,7 +118,7 @@ const getUsersForSidebar = async (req, res) => {
 
         return {
           ...user.toObject(),
-          latestMessage: latestMessage ? latestMessageText : "No messages yet", // ✅ Ensure correct display
+          latestMessage: latestMessage ? latestMessageText : "No messages ", // ✅ Ensure correct display
           lastMessageTime: latestMessage ? latestMessage.createdAt : null,
           isUnread, // ✅ Add unread status
         };
@@ -58,8 +127,6 @@ const getUsersForSidebar = async (req, res) => {
 
     // ✅ Sort users based on the latest message timestamp (newest first)
     usersWithLatestMessage.sort((a, b) => (b.lastMessageTime || 0) - (a.lastMessageTime || 0));
-
-    
 
     res.status(200).json(usersWithLatestMessage);
   } catch (error) {
@@ -105,18 +172,48 @@ const markMessagesAsUnread = async (req, res) => {
 };
 
 // Get all messages between logged-in user and the user to chat with
+// const getMessages = async (req, res) => {
+//   try {
+//     const { id: chatPartnerId } = req.params;
+//     // const {  chatPartnerId } = req.params.id;
+//     const loggedInUserId = req.user._id; 
+
+//     const messages = await Message.find({
+//       $or: [
+//         { senderId: loggedInUserId, receiverId: chatPartnerId },
+//         { senderId: chatPartnerId, receiverId: loggedInUserId }
+//       ],
+//       deletedBy: { $ne: loggedInUserId } // ✅ Exclude messages deleted by this user
+//     }).sort({ createdAt: 1 });
+
+//     res.status(200).json(messages);
+//   } catch (error) {
+//     console.error("Error in getMessages:", error.message);
+//     res.status(500).json({ error: "Internal server error" });
+//   }
+// };
+
 const getMessages = async (req, res) => {
   try {
-    const { id: chatPartnerId } = req.params;
+    const { chatPartnerId } = req.params;
     const loggedInUserId = req.user._id; 
+
+    console.log("Logged-in User ID:", loggedInUserId);
+    console.log("Chat Partner ID:", chatPartnerId);
+
+    if (!mongoose.Types.ObjectId.isValid(chatPartnerId)) {
+      return res.status(400).json({ error: "Invalid chat partner ID." });
+    }
 
     const messages = await Message.find({
       $or: [
-        { senderId: loggedInUserId, receiverId: chatPartnerId },
-        { senderId: chatPartnerId, receiverId: loggedInUserId }
+        { senderId: new mongoose.Types.ObjectId(loggedInUserId), receiverId: new mongoose.Types.ObjectId(chatPartnerId) },
+        { senderId: new mongoose.Types.ObjectId(chatPartnerId), receiverId: new mongoose.Types.ObjectId(loggedInUserId) }
       ],
-      deletedBy: { $ne: loggedInUserId } // ✅ Exclude messages deleted by this user
+      deletedBy: { $ne: loggedInUserId }
     }).sort({ createdAt: 1 });
+
+    console.log("Fetched Messages:", messages);
 
     res.status(200).json(messages);
   } catch (error) {
@@ -125,17 +222,29 @@ const getMessages = async (req, res) => {
   }
 };
 
-
+const mongoose = require("mongoose");
 
 
 const sendMessage = async (req, res) => {
   try {
     const { text, image, audio, document, documentName } = req.body;
-    const { id: receiverId } = req.params;
+    const {  receiverId } = req.body;
+    // const { id: receiverId } = req.params;
     const senderId = req.user._id;
+
+    console.log("Received receiverId:", receiverId); // Debugging line
+
+    // 🔹 Check if the receiverId is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(receiverId)) {
+      return res.status(400).json({ error: "Invalid receiver ID." });
+    }
 
     // 🔹 Check if sender is blocked by the receiver
     const receiver = await User1.findById(receiverId);
+    if (!receiver) {
+      return res.status(404).json({ error: "Receiver not found." });
+    }
+
     if (receiver.blockedUsers.includes(senderId)) {
       return res.status(403).json({ error: "You have been blocked by this user." });
     }
@@ -173,12 +282,13 @@ const sendMessage = async (req, res) => {
     });
 
     await newMessage.save();
+    console.log("messages",newMessage);
+    
+    // Emit the new message via WebSocket (optional if using a real-time feature)
     const receiverSocketId = getReceiverSocketId(receiverId);
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("newMessage", newMessage);
     }
-
-    
 
     res.status(201).json(newMessage);
   } catch (error) {
@@ -186,6 +296,7 @@ const sendMessage = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
 
 const deleteChat = async (req, res) => {
   try {

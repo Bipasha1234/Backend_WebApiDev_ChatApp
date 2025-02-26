@@ -427,13 +427,6 @@ const updateProfile = async (req, res) => {
 
 
  const uploadImage =  (req, res) => {
-  // // check for the file size and send an error message
-  // if (req.file.size > process.env.MAX_FILE_UPLOAD) {
-  //   return res.status(400).send({
-  //     message: `Please upload an image less than ${process.env.MAX_FILE_UPLOAD}`,
-  //   });
-  // }
-
   if (!req.file) {
     return res.status(400).send({ message: "Please upload a file" });
   }
@@ -442,19 +435,6 @@ const updateProfile = async (req, res) => {
     data: req.file.filename,
   });
 }
-// const uploadImage = (req, res) => {
-//   if (!req.file) {
-//     return res.status(400).send({ message: "Please upload a file" });
-//   }
-
-//   // Get the file name and create the full URL for accessing the image
-//   const imageUrl = `http://localhost:3000/uploads/${req.file.filename}`;
-
-//   res.status(200).json({
-//     success: true,
-//     data: imageUrl,  // Send the URL instead of the filename
-//   });
-// };
 
 const checkAuth = (req, res) => {
   try {
@@ -465,8 +445,6 @@ const checkAuth = (req, res) => {
   }
 };
 
-
-
 const getCurrentUser = async (req, res) => {
   const user = await Credential.findById(req.user._id).select("-password");
 
@@ -476,8 +454,6 @@ const getCurrentUser = async (req, res) => {
 
   res.status(200).json(user);
 };
-
-
 
 // Create transporter
 const transporter = nodemailer.createTransport({
@@ -586,6 +562,59 @@ const resetPassword = async (req, res) => {
 };
 
 
+
+const updateProfileApp = async (req, res) => {
+  try {
+    const { email, fullName } = req.body;
+    const userId = req.user._id; // Get user ID from authentication middleware
+
+    // Initialize update fields object
+    const updateFields = {};
+
+    // Check if a profile picture is uploaded and store the filename
+    if (req.file) {
+      updateFields.profilePic = req.file.filename; // Save only the filename, not the full path
+    }
+
+    // Check if email is provided
+    if (email) {
+      updateFields.email = email;
+    }
+
+    // Check if fullName is provided
+    if (fullName) {
+      updateFields.fullName = fullName;
+    }
+
+    // If no fields to update, return an error message
+    if (Object.keys(updateFields).length === 0) {
+      return res.status(400).json({ message: "No fields to update" });
+    }
+
+    // Update the user profile in the database
+    const updatedUser = await Credential.findByIdAndUpdate(
+      userId,
+      updateFields,
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Return the updated user details
+    res.status(200).json({
+      message: "Profile updated successfully",
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    res.status(500).json({ message: "Internal server error", error: error.message });
+  }
+};
+
+
+
 // Add getCurrentUser to the exported functions
 module.exports = {
   register,
@@ -597,5 +626,6 @@ module.exports = {
   getCurrentUser, 
   forgotPassword,
   resetPassword,
-  verifyResetCode// ✅ Added getCurrentUser function
+  verifyResetCode,
+  updateProfileApp
 };
